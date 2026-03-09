@@ -1,0 +1,159 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.42.0.0
+Copyright (C) 2025 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: 1 350585759@qq.com, 1, LIC=P6F5U-SWM4I-UM99A-1XG39-YLS2Q-8LC00
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Professional  Version: 5.42.0.0
+Toolchain Path:  C:\Users\35058\AppData\Local\Keil_v5\ARM\ARMCLANG\Bin
+C Compiler:      ArmClang.exe V6.23
+Assembler:       Armasm.exe V6.23
+Linker/Locator:  ArmLink.exe V6.23
+Library Manager: ArmAr.exe V6.23
+Hex Converter:   FromElf.exe V6.23
+CPU DLL:         SARMCM3.DLL V5.42.0.0
+Dialog DLL:      DCM.DLL V1.17.5.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.3.0.0
+Dialog DLL:      TCM.DLL V1.56.6.0
+ 
+<h2>Project:</h2>
+C:\Users\35058\Desktop\1.3\f4_26_1.1\f4_26_1.1\f4_26_1.1\MDK-ARM\f4.uvprojx
+Project File Date:  01/23/2026
+
+<h2>Output:</h2>
+*** Using Compiler 'V6.23', folder: 'C:\Users\35058\AppData\Local\Keil_v5\ARM\ARMCLANG\Bin'
+Rebuild target 'f4'
+assembling startup_stm32f405xx.s...
+compiling lcd_init.c...
+compiling tim.c...
+compiling w25q128.c...
+compiling spi.c...
+compiling gpio.c...
+compiling dma.c...
+compiling usart.c...
+compiling main.c...
+compiling vs1003.c...
+compiling stm32f4xx_it.c...
+compiling rx.c...
+compiling new_color.c...
+compiling stm32f4xx_hal_msp.c...
+compiling ws2812.c...
+../Core/Src/xuanniu.c(2095): warning: passing 'char[15]' to parameter of type 'const u8 *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+ 2095 |                                 LCD_ShowString(60, 100, "No Custom Logo", WHITE, BLACK, 16, 0);
+      |                                                         ^~~~~~~~~~~~~~~~
+../Core/Inc\lcd.h(33): note: passing argument to parameter 'p' here
+   33 | void LCD_ShowString(u16 x,u16 y,const u8 *p,u16 fc,u16 bc,u8 sizey,u8 mode);
+      |                                           ^
+../Core/Src/xuanniu.c(2096): warning: passing 'char[16]' to parameter of type 'const u8 *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+ 2096 |                                 LCD_ShowString(45, 130, "Upload from APP", GRAY, BLACK, 16, 0);
+      |                                                         ^~~~~~~~~~~~~~~~~
+../Core/Inc\lcd.h(33): note: passing argument to parameter 'p' here
+   33 | void LCD_ShowString(u16 x,u16 y,const u8 *p,u16 fc,u16 bc,u8 sizey,u8 mode);
+      |                                           ^
+2 warnings generated.
+compiling xuanniu.c...
+compiling logo.c...
+compiling stm32f4xx_hal_rcc.c...
+compiling stm32f4xx_hal_flash_ex.c...
+compiling stm32f4xx_hal_flash.c...
+compiling stm32f4xx_hal_rcc_ex.c...
+compiling stm32f4xx_hal_flash_ramfunc.c...
+compiling stm32f4xx_hal_gpio.c...
+compiling stm32f4xx_hal_pwr_ex.c...
+compiling stm32f4xx_hal_dma_ex.c...
+compiling stm32f4xx_hal_pwr.c...
+compiling stm32f4xx_hal_dma.c...
+compiling engine_audio.c...
+compiling stm32f4xx_hal_exti.c...
+compiling stm32f4xx_hal_spi.c...
+compiling stm32f4xx_hal_cortex.c...
+compiling stm32f4xx_hal.c...
+compiling system_stm32f4xx.c...
+compiling stm32f4xx_hal_tim_ex.c...
+compiling stm32f4xx_hal_uart.c...
+compiling stm32f4xx_hal_tim.c...
+../Core/Src/lcd.c(2): warning: In file included from...
+../Core/Inc\lcdfont.h(405): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  405 | "<D6><D0>",0x20,0x00,0x20,0x00,0x20,0x00,0xFE,0x03,0x22,0x02,0x22,0x02,0x22,0x02,0xFE,0x03,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(407): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  407 | "<BE><B0>",0xFC,0x01,0x04,0x01,0xFC,0x01,0x04,0x01,0xFC,0x01,0x20,0x00,0xFF,0x07,0x04,0x01,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(411): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  411 | "<B5><E7>",0x10,0x00,0x10,0x00,0xFF,0x01,0x11,0x01,0x11,0x01,0xFF,0x01,0x11,0x01,0x11,0x01,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(413): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  413 | "<D7><D3>",0x00,0x00,0xFC,0x01,0x80,0x00,0x40,0x00,0x20,0x00,0x20,0x00,0xFF,0x07,0x20,0x00,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(427): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  427 | "<D6><D0>",0x80,0x00,0x80,0x00,0x80,0x00,0x80,0x00,0xFC,0x1F,0x84,0x10,0x84,0x10,0x84,0x10,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(429): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  429 | "<BE><B0>",0xF8,0x0F,0x08,0x08,0xF8,0x0F,0x08,0x08,0xF8,0x0F,0x80,0x00,0xFF,0x7F,0x00,0x00,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(433): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  433 | "<B5><E7>",0x80,0x00,0x80,0x00,0x80,0x00,0xFC,0x1F,0x84,0x10,0x84,0x10,0x84,0x10,0xFC,0x1F,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(435): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  435 | "<D7><D3>",0x00,0x00,0xFE,0x1F,0x00,0x08,0x00,0x04,0x00,0x02,0x80,0x01,0x80,0x00,0xFF,0x7F,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(449): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  449 | "<D6><D0>",0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x18,0x00,0x00,0x08,0x00,0x00,0x08,0x00,0x00,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(455): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  455 | "<BE><B0>",0x00,0x00,0x00,0x00,0x00,0x00,0x40,0x00,0x06,0xC0,0xFF,0x07,0x40,0x00,0x06,0xC0,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(467): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  467 | "<B5><E7>",0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x18,0x00,0x00,0x08,0x00,0x00,0x08,0x00,0x00,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(473): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  473 | "<D7><D3>",0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0xF0,0xFF,0x0F,0x00,0x00,0x06,0x00,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(491): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  491 | "<D6><D0>",0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80,0x00,0x00,0x00,0x80,0x01,0x00,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(499): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  499 | "<BE><B0>",0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x80,0x01,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(515): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  515 | "<B5><E7>",0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0x00,0x00,0x00,0xC0,0x01,0x00,
+      |  ^~~~~~~~
+../Core/Inc\lcdfont.h(523): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+  523 | "<D7><D3>",0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x03,
+      |  ^~~~~~~~
+16 warnings generated.
+compiling lcd.c...
+linking...
+Program Size: Code=105924 RO-data=642036 RW-data=168 ZI-data=16832  
+FromELF: creating hex file...
+"f4\f4.axf" - 0 Error(s), 18 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                https://www.keil.com/pack/ARM.CMSIS.6.1.0.pack
+                ARM::CMSIS@6.1.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 6.1.0
+
+Package Vendor: Keil
+                https://www.keil.com/pack/Keil.STM32F4xx_DFP.3.1.1.pack
+                Keil::STM32F4xx_DFP@3.1.1
+                STMicroelectronics STM32F4 Series Device Support
+
+<h2>Collection of Component include folders:</h2>
+  ./RTE/_f4
+  C:/Users/35058/AppData/Local/Arm/Packs/ARM/CMSIS/6.1.0/CMSIS/Core/Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE@6.1.0
+      Include file:  CMSIS/Core/Include/tz_context.h
+Build Time Elapsed:  00:00:04
+</pre>
+</body>
+</html>
