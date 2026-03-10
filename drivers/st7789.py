@@ -111,11 +111,8 @@ class ST7789:
         self._cmd(_COLMOD, b'\x05')
         sleep_ms(10)
 
-        # MADCTL: rotation=1 → MX|MV = 0x60, 加 BGR = 0x68
-        self._cmd(_MADCTL, b'\x68')
-
-        # 反色开启（ST7789 通常需要 INVON 才能正确显示颜色）
-        self._cmd(_INVON)
+        # MADCTL: rotation=1 → MX|MV = 0x60, RGB顺序(无BGR位)
+        self._cmd(_MADCTL, b'\x60')
 
         # 正常显示模式
         self._cmd(_NORON)
@@ -124,6 +121,9 @@ class ST7789:
         # 开启显示
         self._cmd(_DISPON)
         sleep_ms(10)
+
+        # 初始化后立即填充黑色，避免白屏闪烁
+        self.fill(0x0000)
 
     def set_window(self, x0, y0, x1, y1):
         """设置写入窗口区域（含偏移校正）。

@@ -63,9 +63,10 @@ class PresetScreen(Screen):
         font8 = get_font(8)
 
         # 顶栏（覆盖式）
-        num_text = "{}/{}".format(idx + 1, len(PRESETS)).ljust(5)
+        num_text = "{}/{}".format(idx + 1, len(PRESETS))
+        num_text = num_text + ' ' * (5 - len(num_text)) if len(num_text) < 5 else num_text
         r.draw_text(font8, num_text, 4, TOP_Y + 2, ACCENT, BLACK)
-        padded_name = name.ljust(8)
+        padded_name = name + ' ' * (8 - len(name)) if len(name) < 8 else name
         nw = font8.text_width(padded_name)
         r.draw_text(font8, padded_name, SCREEN_W // 2 - nw // 2, TOP_Y + 2, WHITE, BLACK)
 

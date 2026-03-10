@@ -75,7 +75,7 @@ class Renderer:
         """
         text = str(value)
         # 固定宽度：右对齐补空格，确保覆盖旧内容
-        padded = text.rjust(4)
+        padded = ' ' * (4 - len(text)) + text if len(text) < 4 else text
         tw = font.text_width(padded)
         x = cx - tw // 2
         y = cy - font.height // 2

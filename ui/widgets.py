@@ -70,7 +70,8 @@ def draw_rgb_channel_bar(r, y, channel_idx, value, active, color):
 
     # 数值
     val_text = str(value)
-    r.draw_text(font8, val_text.rjust(3), SCREEN_W - 28, y, label_fg, BLACK)
+    val_text = ' ' * (3 - len(val_text)) + val_text if len(val_text) < 3 else val_text
+    r.draw_text(font8, val_text, SCREEN_W - 28, y, label_fg, BLACK)
 
 
 def draw_hint(r, text="2x:Back"):

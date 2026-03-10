@@ -92,7 +92,8 @@ class RGBScreen(Screen):
 
         # 顶栏（覆盖式，固定宽度）
         r.draw_text(font8, _MODE_LABELS[state.rgb_mode], 4, TOP_Y + 2, ACCENT, BLACK)
-        strip_name = _STRIP_NAMES[state.rgb_strip].ljust(4)
+        strip_name = _STRIP_NAMES[state.rgb_strip]
+        strip_name = strip_name + ' ' * (4 - len(strip_name))
         r.draw_text(font8, strip_name, 60, TOP_Y + 2, WHITE, BLACK)
 
         # 颜色预览
