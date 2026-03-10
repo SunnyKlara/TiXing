@@ -1,0 +1,4 @@
+# file: C:\Users\35058\Desktop\3.6\screens\__init__.py
+# hypothesis_version: 6.151.9
+
+['config', 'coordinator', 'devices', 'effects', 'input', 'renderer', 'screen_manager', 'state']

@@ -1,0 +1,4 @@
+# file: C:\Users\35058\Desktop\3.6\app_state.py
+# hypothesis_version: 6.151.9
+
+[100, 'breath_mode', 'brightness', 'cob1_rgb', 'cob2_rgb', 'fan_speed', 'gradient_mode', 'menu_idx', 'preset_idx', 'pump_speed', 'rgb_channel', 'rgb_mode', 'rgb_strip', 'smoke_speed', 'throttle_mode']
