@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""PC端菜单界面预览工具。
+"""PC端菜单滚轮界面预览工具。
 
-模拟76×284屏幕, 渲染图标集并显示预览窗口。
-用于快速迭代UI设计, 不需要烧录到Pico。
+模拟76×284屏幕, 渲染滑动式菜单滚轮界面。
+选中项居中放大高亮, 两侧项缩小淡化。
 
 用法: py tools/preview_menu.py
 """
@@ -21,6 +21,23 @@ SCREEN_H = 76
 BIN_PATH = Path("assets/menu_icons_alpha.bin")
 SCALE = 4  # 预览放大倍数
 
+# 布局常量 (与 screens/menu.py 一致)
+ITEM_SPACING = 64
+CENTER_X = SCREEN_W // 2  # 142
+ICON_Y = 4
+LABEL_Y_BIG = 40
+LABEL_Y_SMALL = 38
+DOTS_Y = SCREEN_H - 6
+MAX_VISIBLE = 5
+
+# 颜色
+ACCENT_RGB = (0, 215, 255)   # 蓝青强调色
+WHITE_RGB = (255, 255, 255)
+GRAY_RGB = (120, 120, 120)
+BLACK_RGB = (0, 0, 0)
+
+NAMES = ["Speed", "Smoke", "Pump", "Color", "RGB", "Bright"]
+
 
 def load_icon_sheet(path):
     """加载图标集.bin, 返回(icon_w, icon_h, count, icons_gray4)"""
@@ -29,22 +46,18 @@ def load_icon_sheet(path):
         icon_w = hdr[0]
         icon_h = hdr[1]
         count = hdr[2]
-
         offsets = []
         for _ in range(count):
             ob = f.read(2)
             offsets.append(ob[0] | (ob[1] << 8))
-
         data = f.read()
 
-    # 解码每个图标的RLE
     icons = []
     for i in range(count):
         offset = offsets[i]
         pixels = []
         di = offset
         total_px = icon_w * icon_h
-
         while len(pixels) < total_px:
             if di >= len(data):
                 break
@@ -55,113 +68,129 @@ def load_icon_sheet(path):
             di += 2
             need = min(c, total_px - len(pixels))
             pixels.extend([v] * need)
-
-        # 补齐
         while len(pixels) < total_px:
             pixels.append(0)
-
         icons.append(pixels)
-
     return icon_w, icon_h, count, icons
 
 
-def render_menu_preview(selected=0):
-    """渲染菜单界面预览图。"""
-    icon_w, icon_h, count, icons = load_icon_sheet(str(BIN_PATH))
+def calc_visible_items(selected_idx, total_count):
+    """与 screens/menu.py 中的 calc_visible_items 逻辑一致。"""
+    result = []
+    seen = set()
+    half = MAX_VISIBLE // 2
+    offsets = [0]
+    for d in range(1, half + 1):
+        offsets.append(-d)
+        offsets.append(d)
 
-    # 创建屏幕图像
-    screen = Image.new('RGB', (SCREEN_W, SCREEN_H), (0, 0, 0))
+    for offset in offsets:
+        item_idx = (selected_idx + offset) % total_count
+        cx = CENTER_X + offset * ITEM_SPACING
+        if cx < -ITEM_SPACING // 2 or cx > SCREEN_W + ITEM_SPACING // 2:
+            continue
+        if item_idx in seen:
+            continue
+        seen.add(item_idx)
+
+        if offset == 0:
+            icon_size = 32
+            fg_color = ACCENT_RGB
+            font_size = 16
+        elif abs(offset) == 1:
+            icon_size = 20
+            fg_color = WHITE_RGB
+            font_size = 16
+        else:
+            icon_size = 16
+            fg_color = GRAY_RGB
+            font_size = 16
+
+        result.append((item_idx, cx, icon_size, fg_color, font_size))
+    return result
+
+
+def draw_icon(screen, pixels, icon_w, icon_h, cx, cy, size, fg_color):
+    """在screen上绘制缩放后的图标, alpha混合前景色。"""
+    half = size // 2
+    for py in range(size):
+        for px in range(size):
+            # 从原始图标采样
+            src_y = py * icon_h // size
+            src_x = px * icon_w // size
+            val = pixels[src_y * icon_w + src_x]
+            if val > 0:
+                alpha = val / 15.0
+                r = int(fg_color[0] * alpha)
+                g = int(fg_color[1] * alpha)
+                b = int(fg_color[2] * alpha)
+                sx = cx - half + px
+                sy = cy + py
+                if 0 <= sx < SCREEN_W and 0 <= sy < SCREEN_H:
+                    screen.putpixel((sx, sy), (r, g, b))
+
+
+def render_menu_wheel(selected=0):
+    """渲染滑动式菜单滚轮预览图。"""
+    icon_w, icon_h, count, icons = load_icon_sheet(str(BIN_PATH))
+    screen = Image.new('RGB', (SCREEN_W, SCREEN_H), BLACK_RGB)
     draw = ImageDraw.Draw(screen)
 
-    # 菜单项名称
-    names = ["Speed", "Smoke", "Pump", "Color", "RGB", "Bright"]
+    items = calc_visible_items(selected, len(NAMES))
 
-    # 布局: 图标居中显示, 下方文字, 底部导航点
-    icon_y = 4
-    text_y = icon_y + icon_h + 2
-    dots_y = SCREEN_H - 8
+    # 先绘制侧边项, 再绘制选中项 (确保选中项在最上层)
+    center_item = None
+    side_items = []
+    for item in items:
+        if item[3] == ACCENT_RGB:
+            center_item = item
+        else:
+            side_items.append(item)
 
-    # 当前选中的图标居中
-    icon_x = SCREEN_W // 2 - icon_w // 2
+    try:
+        font_big = ImageFont.truetype("arial.ttf", 12)
+        font_small = ImageFont.truetype("arial.ttf", 9)
+    except (OSError, IOError):
+        font_big = ImageFont.load_default()
+        font_small = font_big
 
-    # 渲染选中图标 (alpha混合)
-    if selected < count:
-        pixels = icons[selected]
-        for py in range(icon_h):
-            for px in range(icon_w):
-                val = pixels[py * icon_w + px]
-                if val > 0:
-                    gray = val * 255 // 15
-                    screen.putpixel((icon_x + px, icon_y + py), (gray, gray, gray))
-
-    # 渲染文字 (简单像素字体模拟)
-    if selected < len(names):
-        name = names[selected]
-        # 用Pillow默认字体
-        try:
-            font = ImageFont.truetype("arial.ttf", 10)
-        except (OSError, IOError):
-            font = ImageFont.load_default()
+    for item_idx, cx, icon_size, fg_color, font_size in side_items:
+        # 绘制图标
+        if item_idx < count:
+            draw_icon(screen, icons[item_idx], icon_w, icon_h,
+                      cx, ICON_Y, icon_size, fg_color)
+        # 绘制标签
+        name = NAMES[item_idx]
+        font = font_small
         bbox = draw.textbbox((0, 0), name, font=font)
         tw = bbox[2] - bbox[0]
-        tx = SCREEN_W // 2 - tw // 2
-        draw.text((tx, text_y), name, fill=(255, 255, 255), font=font)
+        draw.text((cx - tw // 2, LABEL_Y_SMALL), name,
+                  fill=fg_color, font=font)
 
-    # 左侧小图标 (前一个, 缩小+暗色)
-    prev_idx = (selected - 1) % count
-    if prev_idx < count:
-        small_size = icon_w * 2 // 3
-        offset_x = 20
-        offset_y = icon_y + (icon_h - small_size) // 2
-        pixels = icons[prev_idx]
-        for py in range(icon_h):
-            for px in range(icon_w):
-                # 简单缩放
-                sy = py * small_size // icon_h
-                sx = px * small_size // icon_w
-                if sy < small_size and sx < small_size:
-                    src_y = py
-                    src_x = px
-                    val = pixels[src_y * icon_w + src_x]
-                    if val > 0:
-                        gray = val * 120 // 15  # 暗一些
-                        ty = offset_y + sy
-                        tx = offset_x + sx
-                        if 0 <= tx < SCREEN_W and 0 <= ty < SCREEN_H:
-                            screen.putpixel((tx, ty), (gray, gray, gray))
-
-    # 右侧小图标
-    next_idx = (selected + 1) % count
-    if next_idx < count:
-        small_size = icon_w * 2 // 3
-        offset_x = SCREEN_W - 20 - small_size
-        offset_y = icon_y + (icon_h - small_size) // 2
-        pixels = icons[next_idx]
-        for py in range(icon_h):
-            for px in range(icon_w):
-                sy = py * small_size // icon_h
-                sx = px * small_size // icon_w
-                if sy < small_size and sx < small_size:
-                    val = pixels[py * icon_w + px]
-                    if val > 0:
-                        gray = val * 120 // 15
-                        ty = offset_y + sy
-                        tx = offset_x + sx
-                        if 0 <= tx < SCREEN_W and 0 <= ty < SCREEN_H:
-                            screen.putpixel((tx, ty), (gray, gray, gray))
+    if center_item:
+        item_idx, cx, icon_size, fg_color, font_size = center_item
+        if item_idx < count:
+            draw_icon(screen, icons[item_idx], icon_w, icon_h,
+                      cx, ICON_Y, icon_size, fg_color)
+        name = NAMES[item_idx]
+        font = font_big
+        bbox = draw.textbbox((0, 0), name, font=font)
+        tw = bbox[2] - bbox[0]
+        draw.text((cx - tw // 2, LABEL_Y_BIG), name,
+                  fill=fg_color, font=font)
 
     # 底部导航圆点
     dot_spacing = 10
-    total_dots_w = (count - 1) * dot_spacing
+    total_dots_w = (len(NAMES) - 1) * dot_spacing
     dots_start_x = SCREEN_W // 2 - total_dots_w // 2
-    for i in range(count):
+    for i in range(len(NAMES)):
         dx = dots_start_x + i * dot_spacing
         if i == selected:
-            draw.ellipse([dx - 2, dots_y - 2, dx + 2, dots_y + 2],
-                         fill=(255, 255, 255))
+            draw.ellipse([dx - 3, DOTS_Y - 3, dx + 3, DOTS_Y + 3],
+                         fill=ACCENT_RGB)
         else:
-            draw.ellipse([dx - 1, dots_y - 1, dx + 1, dots_y + 1],
-                         fill=(80, 80, 80))
+            draw.ellipse([dx - 1, DOTS_Y - 1, dx + 1, DOTS_Y + 1],
+                         fill=(60, 60, 60))
 
     return screen
 
@@ -171,34 +200,30 @@ def main():
         print(f"ERROR: {BIN_PATH} 不存在, 先运行 py tools/generate_menu_icons.py")
         sys.exit(1)
 
-    print("生成菜单预览...")
+    print("生成滑动式菜单滚轮预览...")
 
     # 生成所有菜单项的预览
     previews = []
     for i in range(6):
-        screen = render_menu_preview(selected=i)
-        # 放大
-        scaled = screen.resize((SCREEN_W * SCALE, SCREEN_H * SCALE),
-                               Image.NEAREST)
+        s = render_menu_wheel(selected=i)
+        scaled = s.resize((SCREEN_W * SCALE, SCREEN_H * SCALE), Image.NEAREST)
         previews.append(scaled)
 
-    # 拼接所有预览到一张大图
+    # 拼接所有预览
     gap = 8
     total_h = len(previews) * (SCREEN_H * SCALE + gap) - gap
     combined = Image.new('RGB', (SCREEN_W * SCALE + 40, total_h + 40), (30, 30, 30))
-    names = ["Speed", "Smoke", "Pump", "Color", "RGB", "Bright"]
-
-    for i, (preview, name) in enumerate(zip(previews, names)):
+    for i, preview in enumerate(previews):
         y = 20 + i * (SCREEN_H * SCALE + gap)
         combined.paste(preview, (20, y))
 
     out_path = "assets/menu_preview.png"
     combined.save(out_path)
     print(f"✅ 预览已保存: {out_path}")
-    print(f"   包含6个菜单项, {SCALE}x放大, 模拟76×284屏幕")
+    print(f"   包含6个菜单项滚轮状态, {SCALE}x放大, 模拟76×284屏幕")
 
-    # 也保存单个预览
-    single = render_menu_preview(selected=0)
+    # 单项预览
+    single = render_menu_wheel(selected=0)
     single_scaled = single.resize((SCREEN_W * SCALE, SCREEN_H * SCALE), Image.NEAREST)
     single_path = "assets/menu_preview_single.png"
     single_scaled.save(single_path)

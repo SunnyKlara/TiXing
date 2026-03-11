@@ -23,7 +23,7 @@ from screen_manager import ScreenManager, UI_BOOT, UI_MENU, UI_RGB
 
 # 界面导入
 from screens.boot import BootScreen
-from screens.menu import MenuScreen
+from screens.menu import MenuWheelScreen
 from screens.speed import SpeedScreen
 from screens.smoke import SmokeScreen
 from screens.pump import PumpScreen
@@ -56,7 +56,7 @@ def main():
 
     # 注册所有界面
     sm.register(0, BootScreen(ctx))    # UI_BOOT
-    sm.register(1, MenuScreen(ctx))    # UI_MENU
+    sm.register(1, MenuWheelScreen(ctx))    # UI_MENU
     sm.register(2, SpeedScreen(ctx))   # UI_SPEED
     sm.register(3, SmokeScreen(ctx))   # UI_SMOKE
     sm.register(4, PumpScreen(ctx))    # UI_PUMP

@@ -27,6 +27,8 @@ class SpeedScreen(Screen):
     def on_enter(self):
         self._prev_speed = -1
         self._prev_throttle = None
+        # 进入界面时立即同步风扇到当前状态值
+        self._sync_fan()
 
     def on_input(self, event):
         state = self.ctx.state

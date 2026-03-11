@@ -54,7 +54,7 @@ def get_font(size):
 
 
 def render_char(font, ch, target_w, target_h):
-    """渲染单个字符为 target_w x target_h 的 1-bit 图像。"""
+    """渲染单个字符为 target_w x target_h 的灰度图像（4-bit抗锯齿）。"""
     # 先渲染到较大画布
     canvas = Image.new('L', (target_w * 2, target_h * 2), 0)
     draw = ImageDraw.Draw(canvas)
@@ -68,61 +68,56 @@ def render_char(font, ch, target_w, target_h):
     y = (target_h * 2 - th) // 2 - bbox[1]
     draw.text((x, y), ch, fill=255, font=font)
     
-    # 缩放到目标尺寸
+    # 缩放到目标尺寸（保留灰度抗锯齿）
     canvas = canvas.resize((target_w, target_h), Image.LANCZOS)
-    
-    # 二值化
-    result = Image.new('1', (target_w, target_h), 0)
-    for py in range(target_h):
-        for px in range(target_w):
-            if canvas.getpixel((px, py)) > 100:
-                result.putpixel((px, py), 1)
-    return result
+    return canvas
 
 
 def generate_font_bin(size, chars, out_name):
-    """生成 .bin 字体文件。
+    """生成 4-bit 抗锯齿 .bin 字体文件。
     
-    格式: Header(4B) = width(1B) + height(1B) + first_char(1B) + char_count(1B)
-    字形: 每字符 = width * ceil(height/8) 字节，列优先位图
+    格式: Header(5B) = width(1B) + height(1B) + first_char(1B) + char_count(1B) + bpp(1B)
+    字形: 每字符 = width * height / 2 字节 (4-bit, 每字节2像素, 高4位在前)
     """
-    print(f"  生成 {out_name} ({size}px, {len(chars)} chars)...")
+    print(f"  生成 {out_name} ({size}px, {len(chars)} chars, 4-bit AA)...")
     font = get_font(size)
     
-    # 确定字形尺寸（等宽）
-    glyph_w = max(size * 5 // 8, 4)  # 宽度约为高度的 5/8
+    # 确定字形尺寸（等宽，宽度取偶数方便打包）
+    glyph_w = max(size * 5 // 8, 4)
+    if glyph_w % 2 != 0:
+        glyph_w += 1
     glyph_h = size
-    col_bytes = (glyph_h + 7) // 8
+    bytes_per_glyph = glyph_w * glyph_h // 2
     
     first_char = ord(min(chars))
     last_char = ord(max(chars))
-    full_range = range(first_char, last_char + 1)
     char_count = last_char - first_char + 1
     
     glyphs = bytearray()
-    for code in full_range:
+    for code in range(first_char, first_char + char_count):
         ch = chr(code)
         if ch in chars:
             img = render_char(font, ch, glyph_w, glyph_h)
-            # 列优先编码
-            data = bytearray(glyph_w * col_bytes)
-            for x in range(glyph_w):
-                for y in range(glyph_h):
-                    if img.getpixel((x, y)):
-                        byte_idx = x * col_bytes + y // 8
-                        data[byte_idx] |= 1 << (y % 8)
+            # 4-bit 逐行编码: 每字节存2像素 (高4位=左像素, 低4位=右像素)
+            data = bytearray(bytes_per_glyph)
+            di = 0
+            for y in range(glyph_h):
+                for x in range(0, glyph_w, 2):
+                    v0 = img.getpixel((x, y)) >> 4      # 0-15
+                    v1 = img.getpixel((x + 1, y)) >> 4  # 0-15
+                    data[di] = (v0 << 4) | v1
+                    di += 1
             glyphs.extend(data)
         else:
-            # 空白字形
-            glyphs.extend(bytes(glyph_w * col_bytes))
+            glyphs.extend(bytes(bytes_per_glyph))
     
     out_path = os.path.join(ASSETS_DIR, out_name)
     with open(out_path, 'wb') as f:
-        f.write(bytes([glyph_w, glyph_h, first_char, char_count]))
+        f.write(bytes([glyph_w, glyph_h, first_char, char_count, 4]))  # bpp=4
         f.write(glyphs)
     
-    total = 4 + len(glyphs)
-    print(f"    → {out_path} ({glyph_w}x{glyph_h}, {char_count} chars, {total} bytes)")
+    total = 5 + len(glyphs)
+    print(f"    → {out_path} ({glyph_w}x{glyph_h}, {char_count} chars, 4-bit AA, {total} bytes)")
 
 
 # ─────────────────────────────────────────────
@@ -277,7 +272,7 @@ def main():
     ensure_assets_dir()
     
     # 1. 16px 字体（数字 + 常用 ASCII 符号）
-    chars_16 = "0123456789%.:/-ABCDEFGHIJKLMNOPQRSTUVWXYZ "
+    chars_16 = "0123456789%.:/-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz "
     generate_font_bin(16, chars_16, 'font_16.bin')
     
     # 2. 32px 大数字字体（仅数字 + % + .）

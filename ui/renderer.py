@@ -33,11 +33,11 @@ class Renderer:
     def draw_text(self, font, text, x, y, fg, bg=0x0000):
         """使用位图字体绘制文本，返回绘制宽度。
 
-        逐字符渲染到行缓冲，再 blit 到屏幕。
+        支持 4-bit 抗锯齿 (alpha混合) 和 1-bit 字体。
         """
         fw = font.width
         fh = font.height
-        col_bytes = (fh + 7) // 8
+        bpp = getattr(font, '_bpp', 1)
         fg_hi = (fg >> 8) & 0xFF
         fg_lo = fg & 0xFF
         bg_hi = (bg >> 8) & 0xFF
@@ -47,23 +47,55 @@ class Renderer:
             glyph = font.get_glyph(ch)
             cx = x + i * fw
             if glyph is None:
-                # 空白字符
                 self._display.fill_rect(cx, y, fw, fh, bg)
                 continue
-            # 渲染到行缓冲
             buf = self._buf
             idx = 0
-            for row in range(fh):
-                for col in range(fw):
-                    byte_idx = col * col_bytes + row // 8
-                    bit = (glyph[byte_idx] >> (row % 8)) & 1
-                    if bit:
-                        buf[idx] = fg_hi
-                        buf[idx + 1] = fg_lo
-                    else:
-                        buf[idx] = bg_hi
-                        buf[idx + 1] = bg_lo
-                    idx += 2
+
+            if bpp == 4:
+                # 4-bit 抗锯齿: 逐行, 每字节2像素
+                fg_r = (fg >> 11) & 0x1F
+                fg_g = (fg >> 5) & 0x3F
+                fg_b = fg & 0x1F
+                bg_r = (bg >> 11) & 0x1F
+                bg_g = (bg >> 5) & 0x3F
+                bg_b = bg & 0x1F
+                half_w = fw // 2
+                for row in range(fh):
+                    gi = row * half_w
+                    for col in range(half_w):
+                        byte = glyph[gi + col]
+                        for v in ((byte >> 4) & 0xF, byte & 0xF):
+                            if v == 0:
+                                buf[idx] = bg_hi
+                                buf[idx + 1] = bg_lo
+                            elif v >= 15:
+                                buf[idx] = fg_hi
+                                buf[idx + 1] = fg_lo
+                            else:
+                                iv = 15 - v
+                                r = (fg_r * v + bg_r * iv) // 15
+                                g = (fg_g * v + bg_g * iv) // 15
+                                b = (fg_b * v + bg_b * iv) // 15
+                                c = (r << 11) | (g << 5) | b
+                                buf[idx] = (c >> 8) & 0xFF
+                                buf[idx + 1] = c & 0xFF
+                            idx += 2
+            else:
+                # 1-bit 字体 (旧格式 / 内置8px)
+                col_bytes = (fh + 7) // 8
+                for row in range(fh):
+                    for col in range(fw):
+                        byte_idx = col * col_bytes + row // 8
+                        bit = (glyph[byte_idx] >> (row % 8)) & 1
+                        if bit:
+                            buf[idx] = fg_hi
+                            buf[idx + 1] = fg_lo
+                        else:
+                            buf[idx] = bg_hi
+                            buf[idx + 1] = bg_lo
+                        idx += 2
+
             self._display.blit(buf[:fw * fh * 2], cx, y, fw, fh)
 
         return len(text) * fw
