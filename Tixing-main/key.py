@@ -1,0 +1,203 @@
+# key.py - EC10滚轮编码器控制模块
+# GPIO23：按键（低电平有效） | GPIO24：A相 | GPIO25：B相
+from machine import Pin, Timer
+import utime
+
+# --------------------------
+# 硬件参数配置
+# --------------------------
+# 编码器引脚定义
+EC10_KEY_PIN = 19    # 按键脚（低电平有效）
+EC10_A_PIN = 20      # A相脚
+EC10_B_PIN = 21      # B相脚
+
+# 按键识别参数（可根据需求调整）
+KEY_DEBOUNCE_TIME = 20    # 按键消抖时间(ms)
+LONG_PRESS_TIME = 1000    # 长按判定时间(ms)
+MULTI_CLICK_INTERVAL = 300# 多击间隔时间(ms)，参考 f4 的 300ms
+
+# 编码器消抖参数（适配鼠标滚轮的快速连续触发特性）
+ENCODER_MIN_INTERVAL_MS = 2  # 两次编码器事件最小间隔(ms)，过滤滚轮抖动
+
+# --------------------------
+# 全局变量（用于状态记录）
+# --------------------------
+# 滚轮状态
+_encoder_count = 0        # 滚轮计数值（正转+1，反转-1）
+_encoder_last_a = 1       # A相上一次电平
+_encoder_last_event_time = 0  # 上次编码器事件时间戳(ms)
+
+# 按键状态
+_key_press_time = 0       # 按键按下时间戳
+_key_release_time = 0     # 按键释放时间戳
+_key_click_count = 0      # 按键点击次数
+_key_long_press_flag = False # 长按标志
+_key_event = None         # 按键事件缓存（None/click1/click2/click3/long_press）
+
+# 持久化定时器（避免每次点击创建新定时器导致多个定时器竞争）
+_multi_click_timer = Timer(-1)  # 多击判定定时器（复用同一个，每次点击重置）
+_long_press_timer = Timer(-1)   # 长按检测定时器（复用同一个）
+
+# --------------------------
+# 硬件初始化
+# --------------------------
+# 初始化按键引脚（上拉输入，低电平有效）
+key_pin = Pin(EC10_KEY_PIN, Pin.IN, Pin.PULL_UP)
+
+# 初始化编码器A/B相引脚（上拉输入）
+encoder_a = Pin(EC10_A_PIN, Pin.IN, Pin.PULL_UP)
+encoder_b = Pin(EC10_B_PIN, Pin.IN, Pin.PULL_UP)
+
+# --------------------------
+# 滚轮正反转识别（中断回调）
+# --------------------------
+def _encoder_irq_handler(pin):
+    """A相电平变化中断回调，识别滚轮方向（非阻塞消抖）"""
+    global _encoder_count, _encoder_last_a, _encoder_last_event_time
+    
+    # 非阻塞消抖：检查距上次事件的时间间隔，过滤鼠标滚轮抖动
+    now = utime.ticks_ms()
+    if utime.ticks_diff(now, _encoder_last_event_time) < ENCODER_MIN_INTERVAL_MS:
+        return  # 间隔太短，忽略（抖动）
+    
+    a_val = encoder_a.value()
+    b_val = encoder_b.value()
+    
+    # 仅处理A相上升沿/下降沿（避免重复触发）
+    if a_val != _encoder_last_a:
+        _encoder_last_a = a_val
+        _encoder_last_event_time = now
+        # 正转：A相先变，B相为1；反转：A相先变，B相为0
+        if a_val == 1:  # A相上升沿
+            if b_val == 0:
+                _encoder_count += 1  # 正转
+            else:
+                _encoder_count -= 1  # 反转
+        else:  # A相下降沿
+            if b_val == 1:
+                _encoder_count += 1  # 正转
+            else:
+                _encoder_count -= 1  # 反转
+
+# 注册A相中断（上升沿+下降沿触发）
+encoder_a.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=_encoder_irq_handler)
+
+# --------------------------
+# 按键识别（定时器消抖+状态判断）
+# --------------------------
+def _key_irq_handler(pin):
+    """按键电平变化中断回调，触发消抖定时器"""
+    # 启动消抖定时器（20ms后执行实际判断）
+    # 消抖定时器用一次性的即可，不存在竞争问题
+    key_timer = Timer(-1)
+    key_timer.init(period=KEY_DEBOUNCE_TIME, mode=Timer.ONE_SHOT, callback=_key_debounce_handler)
+
+def _key_debounce_handler(timer):
+    """按键消抖后的实际状态处理"""
+    global _key_press_time, _key_release_time, _key_click_count, _key_long_press_flag
+    
+    key_val = key_pin.value()
+    current_time = utime.ticks_ms()
+    
+    # 按键按下（低电平）
+    if key_val == 0 and _key_press_time == 0:
+        _key_press_time = current_time
+        _key_long_press_flag = False
+        # 复用持久化长按定时器（重新 init 会取消之前的回调）
+        _long_press_timer.init(period=LONG_PRESS_TIME, mode=Timer.ONE_SHOT, callback=_key_long_press_handler)
+    
+    # 按键释放（高电平）
+    elif key_val == 1 and _key_press_time != 0:
+        _key_release_time = current_time
+        
+        # 排除长按（长按已单独处理）
+        if not _key_long_press_flag:
+            _key_click_count += 1
+            # 复用持久化多击定时器：每次点击重新 init，取消之前的回调
+            # 这样只有最后一次点击后的定时器会触发，避免多个定时器竞争
+            _multi_click_timer.init(period=MULTI_CLICK_INTERVAL, mode=Timer.ONE_SHOT, callback=_key_multi_click_handler)
+        
+        # 重置按下时间
+        _key_press_time = 0
+
+def _key_long_press_handler(timer):
+    """长按判定回调"""
+    global _key_long_press_flag, _key_event, _key_click_count
+    # 若按键仍按下，判定为长按
+    if key_pin.value() == 0:
+        _key_long_press_flag = True
+        _key_event = "long_press"
+        _key_click_count = 0  # 重置点击次数
+        # 取消多击定时器（长按和多击互斥）
+        try:
+            _multi_click_timer.deinit()
+        except:
+            pass
+
+def _key_multi_click_handler(timer):
+    """多击判定回调（单击/双击/三击）"""
+    global _key_event, _key_click_count
+    if _key_click_count == 1:
+        _key_event = "click1"
+    elif _key_click_count == 2:
+        _key_event = "click2"
+    elif _key_click_count >= 3:
+        _key_event = "click3"
+    # 重置点击次数
+    _key_click_count = 0
+
+# 注册按键中断（上升沿+下降沿触发）
+key_pin.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=_key_irq_handler)
+
+# --------------------------
+# 对外提供的调用函数（main.py使用）
+# --------------------------
+def get_encoder_dir():
+    """
+    获取滚轮方向（单次调用仅返回一次变化）
+    :return: 1=正转，-1=反转，0=无变化
+    注意：已被 get_encoder_delta() 替代，保留用于向后兼容
+    """
+    global _encoder_count
+    if _encoder_count > 0:
+        _encoder_count -= 1
+        return 1
+    elif _encoder_count < 0:
+        _encoder_count += 1
+        return -1
+    else:
+        return 0
+
+def get_encoder_delta():
+    """
+    获取滚轮累积增量并原子清零（参考 f4 的 Encoder() 统一读取模式）
+    鼠标滚轮编码器旋转连续且快速，一次返回所有累积增量，
+    由主循环开头调用一次，将 delta 传递给各界面处理函数。
+    :return: 累积增量值（正=正转，负=反转，0=无变化）
+    """
+    global _encoder_count
+    delta = _encoder_count
+    _encoder_count = 0
+    return delta
+
+def get_key_event():
+    """
+    获取按键事件（单次调用仅返回一次事件，避免重复触发）
+    :return: "click1"/"click2"/"click3"/"long_press"/None
+    """
+    global _key_event
+    if _key_event is not None:
+        event = _key_event
+        _key_event = None  # 重置事件，避免重复读取
+        return event
+    return None
+
+def clear_encoder_count():
+    """重置滚轮计数值"""
+    global _encoder_count
+    _encoder_count = 0
+
+def clear_key_event():
+    """清空按键事件缓存"""
+    global _key_event
+    _key_event = None

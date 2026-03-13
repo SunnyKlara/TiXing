@@ -1,0 +1,4 @@
+# file: C:\Users\35058\Desktop\3.6\hal\pwm_devices.py
+# hypothesis_version: 6.151.9
+
+[100, 255, 1000, 65535, '_cob1_b', '_cob1_g', '_cob1_r', '_cob2_b', '_cob2_g', '_cob2_r', '_fan', '_pump', '_small_fan', '_smoke']

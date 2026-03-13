@@ -1,0 +1,53 @@
+SmartWatch/
+2├── Core/                       # 核心代码 (CMSIS, 启动文件, 系统配置)
+3│   ├── Inc/                    # 头文件 (stm32f10x.h, core_cm3.h 等)
+4│   ├── Src/                    # 源文件 (system_stm32f10x.c, startup 等)
+5│   └── Startup/                # 启动文件目录
+6│
+7├── Drivers/                    # 驱动代码
+8│   ├── STM32F10x_StdPeriph_Driver/ # 标准外设库 (GPIO, RCC, TIM, I2C 等)
+9│   │   ├── inc/
+10│   │   └── src/
+11│   └── CMSIS/                  # CMSIS 标准接口 (Core, Device)
+12│
+13├── User/                       # 用户代码 (业务逻辑核心)
+14│   ├── main.c                  # 程序入口
+15│   ├── stm32f10x_it.c          # 中断服务函数
+16│   ├── stm32f10x_conf.h        # 外设裁剪配置
+17│   │
+18│   ├── [基础架构模块]
+19│   │   ├── EventBus.c/h        # 事件总线
+20│   │   ├── EventQueue.c/h      # 消息队列
+21│   │   ├── MyTimer.c/h         # 定时器封装
+22│   │   └── MyRTC.c/h           # 实时时钟
+23│   │
+24│   ├── [UI/交互模块]
+25│   │   ├── MenuTree.c/h        # 菜单树逻辑
+26│   │   ├── CreateMenu.c/h      # 菜单创建
+27│   │   ├── Animation.c/h       # 动画引擎
+28│   │   ├── SelectorPhysics.c/h # 选择框物理效果
+29│   │   ├── OLED.c/h            # 屏幕驱动 (依赖 HardI2C)
+30│   │   ├── HardI2C.c/h         # 硬件 I2C 底层
+31│   │   ├── Image.c/h           # 图像处理
+32│   │   ├── Key.c/h             # 按键驱动 (依赖 EventQueue)
+33│   │   ├── Encoder.c/h         # 编码器驱动 (依赖 EventQueue)
+34│   │   └── LED.c/h             # LED 驱动
+35│   │
+36│   ├── [应用框架与应用]
+37│   │   ├── Action.c/h          # 应用框架基类
+38│   │   ├── Clock.c/h           # 时钟应用
+39│   │   ├── Stopwatch.c/h       # 秒表应用
+40│   │   ├── Emoji.c/h           # 表情应用
+41│   │   ├── SystemSET.c/h       # 系统设置
+42│   │   ├── TIMESET.c/h         # 时间设置
+43│   │   ├── FPSSET.c/h          # 帧率设置
+44│   │   └── [游戏应用]
+45│   │       ├── Snake.c/h       # 贪吃蛇
+46│   │       ├── FlappyBird.c/h  # 飞扬的小鸟
+47│   │       ├── PlaneWar.c/h    # 飞机大战
+48│   │       ├── DinoWar.c/h     # 恐龙跑酷
+49│   │       └── MPU6050.c/h     # 3D 立方体 (姿态显示)
+50│   │
+51│   └── ImageData/              # 静态资源
+52│       ├── Icon/               # 图标
+53│       ├── Font/               # 字体

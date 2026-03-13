@@ -1,0 +1,30 @@
+stop模式注意事项:
+
+如果 GPIOA 从来没人动过，它复位后就是“模拟输入”模式（浮空），进入 Stop 前必须把它配成内部下拉（或上拉、推挽输出），否则浮空引脚会在 Stop 里几百微安地吃电流。“没配置” = “浮空”。
+
+GPIO_InitTypeDef  g;
+g.GPIO_Pin  = GPIO_Pin_All;          // 整口一起配
+g.GPIO_Mode = GPIO_Mode_IPD;         // 内部下拉（或 IPU）
+g.GPIO_Speed= GPIO_Speed_2MHz;       // 随意
+GPIO_Init(GPIOA, &g);
+JTAG/SWD 专用引脚（PA13、PA14、PA15、PB3、PB4）。
+这些引脚在上电瞬间 由芯片内部硬件强制设为 AF0（JTAG/SWD）功能，优先级高于 GPIO_Init。
+
+“重要按键唤醒源” = 留灯不灭，只清挂起位，其余全部保持使能；
+
+
+OLED发 Display_OFF（0xAE）→ 关闭内部 DC-DC 与段驱动 → 电流从 10 mA 降到 0.2 mA；
+再 拉低 PB5 → 彻底断电；
+
+
+I²C-DMA 时钟全部关闭
+
+I2C_Cmd(I2C1, DISABLE);
+I2C_DMACmd(I2C1, DISABLE);
+DMA_Cmd(DMA1_Channel6, DISABLE);
+RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, DISABLE);
+RCC_AHBPeriphClockCmd  (RCC_AHBPeriph_DMA1,  DISABLE);
+
+
+苏醒后:开时钟（RCC 层面）
+		重新使能外设（外设层面）
