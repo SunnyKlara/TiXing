@@ -32,6 +32,7 @@ MAGENTA   = 0xF81F
 GRAY      = 0x7BEF
 DARK_GRAY = 0x39E7
 ACCENT    = 0x06BF  # 蓝青强调色
+ACCENT_END = 0x64BF  # 渐变终止色 (100, 150, 255) → Logo 蓝
 WARNING   = ORANGE  # 警告色（油门模式等）
 
 # ── 12 种颜色预设 (name, cob1_rgb888, cob2_rgb888) ──

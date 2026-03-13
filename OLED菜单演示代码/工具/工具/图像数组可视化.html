@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSD1306 OLED 通用可视化工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+
+        h1 {
+            color: #00d4ff;
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .input-panel {
+            background: #151515;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: auto auto 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            color: #888;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .input-group input[type="number"] {
+            width: 100px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #00d4ff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+
+        .input-group textarea {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #00d4ff;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            min-width: 400px;
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .btn-primary {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            align-self: end;
+        }
+
+        .btn-primary:hover {
+            background: #00b8e0;
+            box-shadow: 0 0 20px rgba(0,212,255,0.4);
+        }
+
+        .error-msg {
+            color: #ff4444;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .info-tag {
+            display: inline-block;
+            background: rgba(0,212,255,0.1);
+            color: #00d4ff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-top: 5px;
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr 400px;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #151515;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .panel-title {
+            color: #00d4ff;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-weight: 600;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button.secondary {
+            background: #333;
+            color: #fff;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .hex-container {
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            max-height: 600px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .page-section {
+            margin-bottom: 15px;
+            border: 1px solid #222;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .page-header {
+            background: #1a1a1a;
+            padding: 5px 10px;
+            font-size: 11px;
+            color: #666;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hex-row {
+            display: grid;
+            gap: 1px;
+            padding: 3px;
+        }
+
+        .addr-label {
+            color: #444;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hex-cell {
+            background: #1a1a1a;
+            padding: 3px 1px;
+            text-align: center;
+            border-radius: 2px;
+            font-size: 10px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            min-width: 20px;
+        }
+
+        .hex-cell.active {
+            background: #00d4ff;
+            color: #000;
+            font-weight: bold;
+            border-color: #00d4ff;
+            transform: scale(1.05);
+            box-shadow: 0 0 8px rgba(0,212,255,0.5);
+        }
+
+        .hex-cell.written {
+            background: #004d40;
+            color: #00d4ff;
+            border-color: #00d4ff;
+        }
+
+        .screen-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #oledCanvas {
+            background: #000;
+            border: 2px solid #333;
+            box-shadow: 0 0 30px rgba(0,212,255,0.2);
+            max-width: 100%;
+            height: auto;
+        }
+
+        .screen-labels {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .bit-map-visual {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .bit-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 0;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .bit-num {
+            width: 40px;
+            color: #666;
+        }
+
+        .bit-val {
+            width: 30px;
+            text-align: center;
+            color: #00d4ff;
+        }
+
+        .pixel-bar {
+            flex: 1;
+            height: 20px;
+            background: #222;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pixel-fill {
+            height: 100%;
+            background: #00d4ff;
+            box-shadow: 0 0 10px #00d4ff;
+        }
+
+        .com-label {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .dram-grid {
+            display: grid;
+            gap: 1px;
+            margin-top: 10px;
+        }
+
+        .dram-cell {
+            aspect-ratio: 1;
+            background: #1a1a1a;
+            border-radius: 1px;
+            border: 1px solid #222;
+            transition: all 0.2s;
+        }
+
+        .dram-cell.active {
+            background: #ff9500;
+            border-color: #ff9500;
+            box-shadow: 0 0 5px #ff9500;
+            z-index: 10;
+            transform: scale(1.3);
+        }
+
+        .dram-cell.written {
+            background: #00d4ff;
+        }
+
+        .page-divider {
+            grid-column: 1 / -1;
+            height: 3px;
+            background: #444;
+            margin: 2px 0;
+        }
+
+        .status-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0a0a0a;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .status-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+        }
+
+        .status-label {
+            color: #666;
+        }
+
+        .status-value {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid #444;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .preset-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #444;
+            color: #888;
+            padding: 4px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .preset-btn:hover {
+            background: rgba(0,212,255,0.2);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        @media (max-width: 1400px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .input-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SSD1306 OLED 通用可视化配置器</h1>
+            <div style="color: #888; font-size: 0.9em;">支持任意尺寸 · 逐列扫描可视化 · Page Addressing Mode</div>
+        </header>
+
+        <div class="input-panel">
+            <div class="input-group">
+                <label>宽度 (列数 X)</label>
+                <input type="number" id="inputWidth" value="32" min="8" max="128" step="8">
+                <div class="info-tag">建议: 8的倍数</div>
+            </div>
+            
+            <div class="input-group">
+                <label>高度 (行数 Y)</label>
+                <input type="number" id="inputHeight" value="24" min="8" max="64" step="8">
+                <div class="info-tag" id="pageInfo">自动计算: 3 Pages</div>
+            </div>
+            
+            <div class="input-group" style="flex: 1;">
+                <label>图像数据 (十六进制数组)</label>
+                <textarea id="inputData" placeholder="支持格式: 0x00, 0xFF, 0xE0... 或 00 FF E0...">0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xE0,0x10,0xE8,0xE8,0xF6,0xF6,0xF6,0xF6,0xF6,
+0x66,0xF6,0xF6,0xF6,0xF6,0xF6,0xF6,0xE8,0x10,0xE0,0xE0,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0x00,0xF7,0xF7,0xFF,0xFF,0xFF,0xFF,0xFF,
+0xF0,0xF7,0xF7,0xF7,0xF7,0xFF,0xFF,0xF7,0x00,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x06,0x09,0x09,0x17,0x17,0x17,0x17,0x17,
+0x11,0x17,0x17,0x17,0x17,0x17,0x17,0x09,0x06,0x01,0x01,0x00,0x00,0x00,0x00,0x00,</textarea>
+                <div class="error-msg" id="errorMsg"></div>
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="loadPreset('a-node')">A结点 (32×24)</button>
+                    <button class="preset-btn" onclick="loadPreset('smile')">笑脸 (32×32)</button>
+                    <button class="preset-btn" onclick="loadPreset('battery')">电池 (40×24)</button>
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="applyConfig()">应用配置</button>
+        </div>
+
+        <div class="controls">
+            <button onclick="startAnimation()" id="btnStart">▶ 开始刷写</button>
+            <button onclick="pauseAnimation()" id="btnPause" class="secondary" disabled>⏸ 暂停</button>
+            <button onclick="resetAnimation()" class="secondary">↺ 重置</button>
+            
+            <div style="display: flex; align-items: center; gap: 10px; background: #222; padding: 5px 15px; border-radius: 6px;">
+                <label style="font-size: 13px;">延迟:</label>
+                <input type="range" id="speedRange" min="10" max="500" value="100" style="width: 120px;">
+                <span id="speedVal" style="font-size: 13px; width: 50px;">100ms</span>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- 左侧：数据源 -->
+            <div class="panel">
+                <div class="panel-title">
+                    <span>💾 数据源</span>
+                    <span style="font-size: 0.8em; color: #666;" id="dataStats">0 bytes</span>
+                </div>
+                
+                <div class="hex-container" id="hexContainer"></div>
+
+                <div class="bit-map-visual">
+                    <div style="color: #00d4ff; margin-bottom: 10px; font-size: 0.9em;">🔍 位映射 (D0=顶, D7=底)</div>
+                    <div style="font-size: 0.8em; color: #666; margin-bottom: 10px;">
+                        当前: <span id="currByteVal" style="color: #ff9500;">-</span>
+                    </div>
+                    <div id="bitMapping"></div>
+                </div>
+            </div>
+
+            <!-- 中间：OLED屏幕 -->
+            <div class="panel">
+                <div class="panel-title">📺 OLED 屏幕模拟</div>
+                
+                <div class="screen-wrapper">
+                    <canvas id="oledCanvas"></canvas>
+                    
+                    <div class="screen-labels" id="screenLabels">
+                        <span>COL 0</span>
+                        <span style="color: #00d4ff;">↑ TOP</span>
+                        <span>COL 31</span>
+                    </div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-box" style="background: #00d4ff;"></div>
+                        <span>已写入</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background: #ff9500;"></div>
+                        <span>当前</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background: #111; border-color: #333;"></div>
+                        <span>空白</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：GDDRAM映射 -->
+            <div class="panel">
+                <div class="panel-title">🗺️ GDDRAM 映射</div>
+                <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="dramInfo">
+                    计算中...
+                </div>
+
+                <div class="dram-grid" id="dramGrid"></div>
+
+                <div class="status-panel">
+                    <div style="color: #00d4ff; margin-bottom: 10px;">📝 刷写状态</div>
+                    
+                    <div class="status-line">
+                        <span class="status-label">页 (Page):</span>
+                        <span class="status-value" id="statPage">-</span>
+                    </div>
+                    <div class="status-line">
+                        <span class="status-label">列 (Col):</span>
+                        <span class="status-value" id="statCol">-</span>
+                    </div>
+                    <div class="status-line">
+                        <span class="status-label">地址:</span>
+                        <span class="status-value" id="statAddr">-</span>
+                    </div>
+                    <div class="status-line">
+                        <span class="status-label">指令:</span>
+                        <span class="status-value" id="statCmd" style="font-size: 11px;">-</span>
+                    </div>
+                    <div class="status-line">
+                        <span class="status-label">数据:</span>
+                        <span class="status-value" id="statData">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置状态
+        let COLS = 32;
+        let ROWS = 24;
+        let PAGES = 3;
+        let imageData = [];
+        
+        let isRunning = false;
+        let isPaused = false;
+        let currentIndex = 0;
+        let delay = 100;
+        let timer = null;
+
+        const canvas = document.getElementById('oledCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 预设数据
+        const presets = {
+            'a-node': {
+                width: 32,
+                height: 24,
+                data: [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xE0,0x10,0xE8,0xE8,0xF6,0xF6,0xF6,0xF6,0xF6,0x66,0xF6,0xF6,0xF6,0xF6,0xF6,0xF6,0xE8,0x10,0xE0,0xE0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0x00,0xF7,0xF7,0xFF,0xFF,0xFF,0xFF,0xFF,0xF0,0xF7,0xF7,0xF7,0xF7,0xFF,0xFF,0xF7,0x00,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x06,0x09,0x09,0x17,0x17,0x17,0x17,0x17,0x11,0x17,0x17,0x17,0x17,0x17,0x17,0x09,0x06,0x01,0x01,0x00,0x00,0x00,0x00,0x00]
+            },
+            'smile': {
+                width: 32,
+                height: 32,
+                data: [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x03,0x0C,0x10,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x10,0x0C,0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+            },
+            'battery': {
+                width: 40,
+                height: 24,
+                data: [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x7F,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x41,0x7F,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+            }
+        };
+
+        function loadPreset(name) {
+            const p = presets[name];
+            document.getElementById('inputWidth').value = p.width;
+            document.getElementById('inputHeight').value = p.height;
+            document.getElementById('inputData').value = p.data.map(b => '0x' + b.toString(16).padStart(2, '0')).join(',');
+            updatePageInfo();
+        }
+
+        function updatePageInfo() {
+            const h = parseInt(document.getElementById('inputHeight').value) || 24;
+            const pages = h / 8;
+            document.getElementById('pageInfo').textContent = `自动计算: ${pages} Pages`;
+        }
+
+        document.getElementById('inputHeight').addEventListener('input', updatePageInfo);
+        document.getElementById('speedRange').addEventListener('input', (e) => {
+            delay = parseInt(e.target.value);
+            document.getElementById('speedVal').textContent = delay + 'ms';
+        });
+
+        function parseHexData(str) {
+            // 移除所有非十六进制字符（保留0-9, a-f, A-F, x, X）
+            // 支持格式: 0x00, 0xFF, 00, FF, 0X00 等
+            const cleaned = str.replace(/[^0-9a-fA-FxX,]/g, '');
+            
+            // 分割成数组
+            const parts = cleaned.split(',').filter(p => p.length > 0);
+            
+            const bytes = [];
+            for (let part of parts) {
+                part = part.trim();
+                if (part.startsWith('0x') || part.startsWith('0X')) {
+                    part = part.substring(2);
+                }
+                if (part.length > 0) {
+                    const val = parseInt(part, 16);
+                    if (!isNaN(val) && val >= 0 && val <= 255) {
+                        bytes.push(val);
+                    }
+                }
+            }
+            return bytes;
+        }
+
+        function validateConfig() {
+            const width = parseInt(document.getElementById('inputWidth').value);
+            const height = parseInt(document.getElementById('inputHeight').value);
+            const dataStr = document.getElementById('inputData').value;
+            const errorEl = document.getElementById('errorMsg');
+            
+            if (width < 8 || width > 128) {
+                errorEl.textContent = '宽度必须在 8-128 之间';
+                errorEl.style.display = 'block';
+                return false;
+            }
+            
+            if (height % 8 !== 0) {
+                errorEl.textContent = '高度必须是 8 的倍数 (8, 16, 24, 32...)';
+                errorEl.style.display = 'block';
+                return false;
+            }
+            
+            const bytes = parseHexData(dataStr);
+            const expected = width * (height / 8);
+            
+            if (bytes.length !== expected) {
+                errorEl.textContent = `数据长度错误: 实际 ${bytes.length} 字节, 期望 ${expected} 字节 (${width}×${height/8})`;
+                errorEl.style.display = 'block';
+                return false;
+            }
+            
+            errorEl.style.display = 'none';
+            return { width, height, bytes };
+        }
+
+        function applyConfig() {
+            const config = validateConfig();
+            if (!config) return;
+            
+            COLS = config.width;
+            ROWS = config.height;
+            PAGES = ROWS / 8;
+            imageData = config.bytes;
+            
+            // 更新Canvas尺寸（保持像素近似正方形）
+            const maxCanvasWidth = 600;
+            const pixelSize = Math.min(20, Math.floor(maxCanvasWidth / COLS));
+            const canvasWidth = COLS * pixelSize;
+            const canvasHeight = ROWS * pixelSize;
+            
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            document.getElementById('dataStats').textContent = `${imageData.length} bytes (${COLS}×${PAGES})`;
+            document.getElementById('dramInfo').textContent = `${PAGES}页 × ${COLS}列 = ${imageData.length} Bytes`;
+            document.getElementById('screenLabels').innerHTML = `
+                <span>COL 0</span>
+                <span style="color: #00d4ff;">↑ TOP (${ROWS}行)</span>
+                <span>COL ${COLS-1}</span>
+            `;
+            
+            init();
+            resetAnimation();
+        }
+
+        function init() {
+            // 创建十六进制视图
+            const container = document.getElementById('hexContainer');
+            container.innerHTML = '';
+            
+            for (let page = 0; page < PAGES; page++) {
+                const section = document.createElement('div');
+                section.className = 'page-section';
+                
+                const header = document.createElement('div');
+                header.className = 'page-header';
+                header.innerHTML = `<span>Page ${page} (行${page*8}-${page*8+7})</span><span>CMD: 0x${(0xB0+page).toString(16).toUpperCase()}</span>`;
+                section.appendChild(header);
+                
+                const row = document.createElement('div');
+                row.className = 'hex-row';
+                row.style.gridTemplateColumns = `35px repeat(${COLS}, 1fr)`;
+                
+                const addrLabel = document.createElement('div');
+                addrLabel.className = 'addr-label';
+                addrLabel.textContent = `${page*COLS}`;
+                row.appendChild(addrLabel);
+                
+                for (let col = 0; col < COLS; col++) {
+                    const idx = page * COLS + col;
+                    const cell = document.createElement('div');
+                    cell.className = 'hex-cell';
+                    cell.id = `hex-${idx}`;
+                    cell.textContent = imageData[idx].toString(16).toUpperCase().padStart(2, '0');
+                    cell.title = `Idx:${idx} P:${page} C:${col}`;
+                    row.appendChild(cell);
+                }
+                section.appendChild(row);
+                container.appendChild(section);
+            }
+
+            // 创建GDDRAM网格
+            const dramGrid = document.getElementById('dramGrid');
+            dramGrid.innerHTML = '';
+            dramGrid.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+            
+            for (let page = 0; page < PAGES; page++) {
+                for (let col = 0; col < COLS; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'dram-cell';
+                    cell.id = `dram-${page}-${col}`;
+                    cell.title = `Page ${page}, Col ${col}`;
+                    dramGrid.appendChild(cell);
+                }
+                if (page < PAGES - 1) {
+                    const divider = document.createElement('div');
+                    divider.className = 'page-divider';
+                    dramGrid.appendChild(divider);
+                }
+            }
+
+            updateBitMapping(0);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid(pixelSize);
+        }
+
+        let pixelSize = 10;
+
+        function drawGrid(ps) {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * ps, 0);
+                ctx.lineTo(i * ps, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let i = 0; i <= ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * ps);
+                ctx.lineTo(canvas.width, i * ps);
+                ctx.stroke();
+            }
+            
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            for (let i = 0; i <= PAGES; i++) {
+                const y = i * 8 * ps;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function updateBitMapping(byte) {
+            const container = document.getElementById('bitMapping');
+            container.innerHTML = '';
+            document.getElementById('currByteVal').textContent = `0x${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+            
+            for (let bit = 7; bit >= 0; bit--) {
+                const row = document.createElement('div');
+                row.className = 'bit-row';
+                
+                const bitLabel = document.createElement('div');
+                bitLabel.className = 'bit-num';
+                bitLabel.textContent = `D${bit}`;
+                
+                const val = document.createElement('div');
+                val.className = 'bit-val';
+                const bitVal = (byte >> bit) & 1;
+                val.textContent = bitVal;
+                
+                const barContainer = document.createElement('div');
+                barContainer.className = 'pixel-bar';
+                
+                if (bitVal) {
+                    const fill = document.createElement('div');
+                    fill.className = 'pixel-fill';
+                    fill.style.width = '100%';
+                    barContainer.appendChild(fill);
+                }
+                
+                const comLabel = document.createElement('div');
+                comLabel.className = 'com-label';
+                comLabel.textContent = `COM${bit}`;
+                comLabel.style.color = bitVal ? '#000' : '#666';
+                barContainer.appendChild(comLabel);
+                
+                row.appendChild(bitLabel);
+                row.appendChild(val);
+                row.appendChild(barContainer);
+                container.appendChild(row);
+            }
+        }
+
+        function drawScreen() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < currentIndex && i < imageData.length; i++) {
+                const page = Math.floor(i / COLS);
+                const col = i % COLS;
+                const byte = imageData[i];
+                
+                for (let bit = 0; bit < 8; bit++) {
+                    if ((byte >> bit) & 1) {
+                        const row = page * 8 + bit;
+                        ctx.fillStyle = '#00d4ff';
+                        ctx.fillRect(col * pixelSize, row * pixelSize, pixelSize - 1, pixelSize - 1);
+                    }
+                }
+            }
+            
+            if (currentIndex < imageData.length) {
+                const page = Math.floor(currentIndex / COLS);
+                const col = currentIndex % COLS;
+                ctx.strokeStyle = '#ff9500';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(col * pixelSize, page * 8 * pixelSize, pixelSize, 8 * pixelSize);
+            }
+            
+            drawGrid(pixelSize);
+        }
+
+        function updateStatus(idx) {
+            const page = Math.floor(idx / COLS);
+            const col = idx % COLS;
+            const byte = imageData[idx];
+            
+            document.getElementById('statPage').textContent = `${page} (0x${(0xB0+page).toString(16).toUpperCase()})`;
+            document.getElementById('statCol').textContent = `${col} (0x${col.toString(16).padStart(2, '0')})`;
+            document.getElementById('statAddr').textContent = idx;
+            document.getElementById('statCmd').textContent = `Set Page 0x${(0xB0+page).toString(16).toUpperCase()}, Col 0x${col.toString(16).padStart(2, '0')}`;
+            document.getElementById('statData').textContent = `0x${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+            
+            document.querySelectorAll('.hex-cell').forEach((cell, i) => {
+                cell.classList.remove('active');
+                if (i < idx) cell.classList.add('written');
+                if (i === idx) cell.classList.add('active');
+            });
+            
+            document.querySelectorAll('.dram-cell').forEach(cell => {
+                cell.classList.remove('active');
+            });
+            const dramCell = document.getElementById(`dram-${page}-${col}`);
+            if (dramCell) {
+                dramCell.classList.add('active');
+                dramCell.classList.add('written');
+            }
+            
+            updateBitMapping(byte);
+            drawScreen();
+        }
+
+        async function animate() {
+            while (isRunning && currentIndex < imageData.length) {
+                if (isPaused) {
+                    await new Promise(r => setTimeout(r, 50));
+                    continue;
+                }
+                
+                updateStatus(currentIndex);
+                currentIndex++;
+                await new Promise(r => setTimeout(r, delay));
+            }
+            
+            if (currentIndex >= imageData.length) {
+                isRunning = false;
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnPause').disabled = true;
+                document.getElementById('statCmd').textContent = "Done - Display On (0xAF)";
+            }
+        }
+
+        function startAnimation() {
+            if (imageData.length === 0) {
+                alert('请先应用配置');
+                return;
+            }
+            if (isRunning) return;
+            
+            if (currentIndex >= imageData.length) {
+                resetAnimation();
+                setTimeout(() => {
+                    isRunning = true;
+                    document.getElementById('btnStart').disabled = true;
+                    document.getElementById('btnPause').disabled = false;
+                    animate();
+                }, 100);
+            } else {
+                isRunning = true;
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnPause').disabled = false;
+                animate();
+            }
+        }
+
+        function pauseAnimation() {
+            isPaused = !isPaused;
+            document.getElementById('btnPause').textContent = isPaused ? '▶ 继续' : '⏸ 暂停';
+        }
+
+        function resetAnimation() {
+            isRunning = false;
+            isPaused = false;
+            currentIndex = 0;
+            
+            document.querySelectorAll('.hex-cell').forEach(c => c.classList.remove('active', 'written'));
+            document.querySelectorAll('.dram-cell').forEach(c => c.classList.remove('active', 'written'));
+            
+            document.getElementById('statPage').textContent = '-';
+            document.getElementById('statCol').textContent = '-';
+            document.getElementById('statAddr').textContent = '-';
+            document.getElementById('statCmd').textContent = '-';
+            document.getElementById('statData').textContent = '-';
+            
+            if (imageData.length > 0) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                drawGrid(pixelSize);
+                updateBitMapping(0);
+            }
+            
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnPause').disabled = true;
+            document.getElementById('btnPause').textContent = '⏸ 暂停';
+        }
+
+        // 初始化
+        updatePageInfo();
+        applyConfig();
+    </script>
+</body>
+</html>

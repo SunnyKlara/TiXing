@@ -50,7 +50,7 @@ class ST7789:
             y_offset: 行偏移（rotation=1 时）
         """
         if spi is None:
-            spi = SPI(0, baudrate=20_000_000,
+            spi = SPI(0, baudrate=62_500_000,
                        sck=Pin(2), mosi=Pin(3), miso=None)
         if dc is None:
             dc = Pin(0, Pin.OUT)
@@ -192,3 +192,17 @@ class ST7789:
             color: RGB565 颜色值（整数）
         """
         self.fill_rect(0, 0, self.WIDTH, self.HEIGHT, color)
+
+    def blit_block(self, buf, x, y, w, h):
+        """一次性写入整块像素数据（单次 set_window + 单次 write）。
+
+        比逐行 blit 减少 (h-1) 次 SPI 事务开销。
+        buf 必须包含 w*h*2 字节 RGB565 数据。
+        """
+        if w <= 0 or h <= 0:
+            return
+        self.set_window(x, y, x + w - 1, y + h - 1)
+        self.cs.off()
+        self.dc.on()
+        self.spi.write(buf)
+        self.cs.on()

@@ -27,6 +27,10 @@ class Display:
         self._st.set_window(x, y, x + w - 1, y + h - 1)
         self._st.write_data(buf)
 
+    def blit_block(self, buf, x, y, w, h):
+        """整块写入 (单次 set_window + write), 比逐行 blit 快。"""
+        self._st.blit_block(buf, x, y, w, h)
+
     def hline(self, x, y, w, color):
         """水平线。"""
         self._st.fill_rect(x, y, w, 1, color)
