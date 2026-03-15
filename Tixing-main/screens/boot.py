@@ -29,10 +29,8 @@ class BootScreen(Screen):
         r.clear(BLACK)
 
         if self._logo:
-            # 居中显示 Logo
-            lx = (SCREEN_W - self._logo.width) // 2
-            ly = (SCREEN_H - self._logo.height) // 2 - 8
-            self._logo.blit_to(r, lx, ly)
+            # 全屏 Logo (284x76) 直接 blit
+            self._logo.blit_to(r, 0, 0)
         else:
             # 回退：纯文字 Logo
             font = get_font(16)
@@ -41,13 +39,6 @@ class BootScreen(Screen):
             x = (SCREEN_W - tw) // 2
             y = (SCREEN_H - font.height) // 2 - 4
             r.draw_text(font, text, x, y, ACCENT, BLACK)
-
-        # 底部品牌文字
-        font8 = get_font(8)
-        brand = "PicoTurbo v2.0"
-        bw = font8.text_width(brand)
-        r.draw_text(font8, brand, (SCREEN_W - bw) // 2,
-                    SCREEN_H - 12, WHITE, BLACK)
 
     def draw_update(self, r):
         pass  # 开机动画不需要局部刷新

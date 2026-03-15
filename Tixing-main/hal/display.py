@@ -10,9 +10,10 @@ class Display:
     WIDTH = 284
     HEIGHT = 76
 
-    def __init__(self):
+    def __init__(self, skip_init=False):
         self._st = ST7789()
-        self._st.init()
+        if not skip_init:
+            self._st.init()
 
     def fill(self, color):
         """全屏填充 RGB565 颜色。"""

@@ -10,61 +10,100 @@ except ImportError:
         sleep(ms / 1000.0)
     import gc
 
-from hal.pwm_devices import PwmDevices
+# 只提前 import Display，其他模块延迟到 Logo 上屏后再加载
 from hal.display import Display
-from hal.input import Input
-from services.config import Config
-from services.effects import Effects
-from services.coordinator import Coordinator
-from app_state import AppState
-from ui.renderer import Renderer
-from screens import Context
-from screen_manager import ScreenManager, UI_BOOT, UI_MENU, UI_RGB
-
-# 界面导入
-from screens.boot import BootScreen
-from screens.menu import MenuWheelScreen
-from screens.speed import SpeedScreen
-from screens.smoke import SmokeScreen
-from screens.pump import PumpScreen
-from screens.preset import PresetScreen
-from screens.rgb import RGBScreen
-from screens.brightness import BrightnessScreen
 
 
 def main():
-    """应用入口：初始化 → 开机动画 → 主循环。"""
+    """应用入口：Logo → 进度条 → 主循环。"""
 
-    # ── 第 1 步：硬件初始化 ──
+    # ── 第 1 步：复用 boot.py 已初始化的屏幕（不重复硬件复位）──
+    display = Display(skip_init=True)
+
+    # ── 进度条参数 ──
+    BAR_H = 3
+    BAR_Y = 76 - BAR_H
+    BAR_W = 284
+    STEPS = 40
+    STEP_W = (BAR_W + STEPS - 1) // STEPS
+    WHITE = 0xFFFF
+    _step = [0]  # 用列表包装以便闭包修改
+
+    def _bar(n):
+        """推进 n 步进度条"""
+        st = display._st
+        for _ in range(n):
+            if _step[0] >= STEPS:
+                break
+            x = _step[0] * STEP_W
+            w = min(STEP_W, BAR_W - x)
+            if w > 0:
+                st.fill_rect(x, BAR_Y, w, BAR_H, WHITE)
+            _step[0] += 1
+
+    # ── 第 2 步：边加载模块边推进度条 ──
+    _bar(2)
+    from hal.pwm_devices import PwmDevices
+    from hal.input import Input
+    _bar(3)
+    from services.config import Config
+    from services.effects import Effects
+    from services.coordinator import Coordinator
+    _bar(3)
+    from app_state import AppState
+    from ui.renderer import Renderer
+    from screens import Context
+    from screen_manager import ScreenManager, UI_BOOT, UI_MENU, UI_RGB
+    _bar(4)
+    from screens.boot import BootScreen
+    from screens.menu import MenuWheelScreen
+    from screens.speed import SpeedScreen
+    from screens.smoke import SmokeScreen
+    _bar(3)
+    from screens.pump import PumpScreen
+    from screens.preset import PresetScreen
+    from screens.rgb import RGBScreen
+    from screens.brightness import BrightnessScreen
+    _bar(3)
+
     devices = PwmDevices()
     devices.stop_all()
-    display = Display()
     inp = Input()
+    _bar(2)
 
-    # ── 第 2 步：服务初始化 ──
     config = Config()
     state = AppState()
     config.load_to_state(state)
     effects = Effects(devices)
     coordinator = Coordinator(devices)
+    _bar(3)
 
     # ── 第 3 步：UI 初始化 ──
     renderer = Renderer(display)
     ctx = Context(renderer, devices, config, state,
                   effects, coordinator, inp=inp)
     sm = ScreenManager(ctx)
+    _bar(2)
 
     # 注册所有界面
-    sm.register(0, BootScreen(ctx))    # UI_BOOT
-    sm.register(1, MenuWheelScreen(ctx))    # UI_MENU
-    sm.register(2, SpeedScreen(ctx))   # UI_SPEED
-    sm.register(3, SmokeScreen(ctx))   # UI_SMOKE
-    sm.register(4, PumpScreen(ctx))    # UI_PUMP
-    sm.register(5, PresetScreen(ctx))  # UI_PRESET
-    sm.register(6, RGBScreen(ctx))     # UI_RGB
-    sm.register(7, BrightnessScreen(ctx))  # UI_BRIGHT
+    sm.register(0, BootScreen(ctx))
+    sm.register(1, MenuWheelScreen(ctx))
+    sm.register(2, SpeedScreen(ctx))
+    sm.register(3, SmokeScreen(ctx))
+    sm.register(4, PumpScreen(ctx))
+    sm.register(5, PresetScreen(ctx))
+    sm.register(6, RGBScreen(ctx))
+    sm.register(7, BrightnessScreen(ctx))
+    _bar(3)
 
-    # ── 第 4 步：直接进入菜单（跳过开机动画）──
+    # ── 第 4 步：剩余进度条匀速走完 ──
+    remaining = STEPS - _step[0]
+    if remaining > 0:
+        delay = 1500 // remaining  # 剩余 1.5 秒匀速填满
+        for _ in range(remaining):
+            _bar(1)
+            sleep_ms(delay)
+
     sm.switch(UI_MENU)
     gc.collect()
 

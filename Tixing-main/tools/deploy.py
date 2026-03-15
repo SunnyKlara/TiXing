@@ -16,7 +16,7 @@ PICO_PORT = 'COM4'
 
 # 需要烧录的目录和文件
 DIRS = ['drivers', 'hal', 'ui', 'screens', 'services', 'assets', 'icons']
-ROOT_FILES = ['main.py', 'app_state.py', 'screen_manager.py']
+ROOT_FILES = ['boot.py', 'main.py', 'app_state.py', 'screen_manager.py']
 
 
 def run(cmd, check=True):
@@ -46,34 +46,17 @@ def cp_file(local, remote):
 
 def deploy():
     print("=" * 50)
-    print("Pico Turbo 一键部署")
+    print("Pico Turbo 一键部署 (快速模式)")
     print("=" * 50)
 
-    # 检查连接
-    print("\n[1/4] 检查 Pico 连接 ({})...".format(PICO_PORT))
-    if not mpremote('eval', '1'):
-        print("ERROR: 无法连接 Pico ({}), 请确认 USB 连接且 Thonny 已关闭".format(PICO_PORT))
-        sys.exit(1)
-    print("    连接成功!")
-
-    # 创建目录
-    print("\n[2/4] 创建目录结构...")
-    for d in DIRS:
-        mkdir_pico(d)
-
-    # 上传文件
-    print("\n[3/4] 上传文件...")
-    count = 0
-    errors = 0
+    # 收集所有需要上传的文件
+    files = []
 
     # 根目录文件
     for f in ROOT_FILES:
         path = os.path.join(PROJECT_ROOT, f)
         if os.path.exists(path):
-            if cp_file(path, f):
-                count += 1
-            else:
-                errors += 1
+            files.append((path, f))
 
     # 各子目录
     for d in DIRS:
@@ -83,24 +66,38 @@ def deploy():
         for f in sorted(os.listdir(dir_path)):
             fpath = os.path.join(dir_path, f)
             if os.path.isfile(fpath) and (f.endswith('.py') or f.endswith('.bin')):
-                remote = d + '/' + f
-                if cp_file(fpath, remote):
-                    count += 1
-                else:
-                    errors += 1
+                files.append((fpath, d + '/' + f))
 
-    # 完成
-    print(f"\n[4/4] 部署完成")
-    print(f"  上传: {count} 个文件")
-    if errors:
-        print(f"  失败: {errors} 个文件")
-    else:
-        print("  全部成功！")
+    print(f"\n共 {len(files)} 个文件待上传")
+
+    # 构建 mpremote 命令链: 单次连接完成所有操作
+    cmd = MPREMOTE + ['connect', PICO_PORT]
+
+    # 用 exec 在设备端创建目录（已存在不报错）
+    mkdir_code = "import os\n"
+    for d in DIRS:
+        mkdir_code += f"try:\n os.mkdir('{d}')\nexcept: pass\n"
+    cmd += ['+', 'exec', mkdir_code]
+
+    # 上传所有文件
+    for local, remote in files:
+        cmd += ['+', 'cp', local, ':' + remote]
 
     # 重启
-    print("\n重启 Pico...")
-    mpremote('reset')
-    print("Done! Pico 应该已经开始运行了。")
+    cmd += ['+', 'reset']
+
+    print("单次连接上传中...")
+
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=PROJECT_ROOT)
+    if r.stdout.strip():
+        for line in r.stdout.strip().split('\n'):
+            print(f"  {line}")
+    if r.returncode != 0:
+        print(f"ERROR: {r.stderr.strip()}")
+        sys.exit(1)
+
+    print(f"\n部署完成! 上传 {len(files)} 个文件, Pico 已重启。")
+
 
 
 if __name__ == '__main__':

@@ -38,7 +38,7 @@ class ST7789:
     HEIGHT = 76
 
     def __init__(self, spi=None, dc=None, cs=None, rst=None,
-                 x_offset=18, y_offset=82):
+                 x_offset=18, y_offset=82, bl=None):
         """初始化 SPI 总线和引脚。
 
         Args:
@@ -48,6 +48,7 @@ class ST7789:
             rst: RST 引脚，默认 GPIO5
             x_offset: 列偏移（rotation=1 时）
             y_offset: 行偏移（rotation=1 时）
+            bl:  背光引脚号（如 GPIO4），None 表示无背光控制
         """
         if spi is None:
             spi = SPI(0, baudrate=62_500_000,
@@ -66,14 +67,26 @@ class ST7789:
         self.x_off = x_offset
         self.y_off = y_offset
 
+        # 背光控制（可选）
+        if bl is not None:
+            self.bl = Pin(bl, Pin.OUT)
+            self.bl.off()  # 初始化期间关闭背光
+        else:
+            self.bl = None
+
         # 预分配命令缓冲
         self._cmd1 = bytearray(1)
         self._pos_buf = bytearray(4)
 
-    def init(self):
-        """执行硬件复位 + 初始化序列。"""
+    def init(self, logo_data=None, logo_w=0, logo_h=0):
+        """执行硬件复位 + 初始化序列。
+
+        Args:
+            logo_data: 可选 RGB565 Logo 数据，在 DISPON 前写入 RAM
+            logo_w, logo_h: Logo 尺寸
+        """
         self._hard_reset()
-        self._init_seq()
+        self._init_seq(logo_data, logo_w, logo_h)
 
     def _hard_reset(self):
         """硬件复位时序。"""
@@ -97,13 +110,15 @@ class ST7789:
             self.spi.write(data)
         self.cs.on()
 
-    def _init_seq(self):
+    def _init_seq(self, logo_data=None, logo_w=0, logo_h=0):
         """ST7789 初始化序列（rotation=1, BGR, 16bit, INVON）。"""
         self._cmd(_SWRESET)
         sleep_ms(50)
 
         self._cmd(_SLPOUT)
         sleep_ms(50)
+
+        self._cmd(0x28)  # DISPOFF — 保持关闭，防止白屏
 
         self._cmd(_COLMOD, b'\x05')
 
@@ -112,10 +127,18 @@ class ST7789:
 
         self._cmd(_NORON)
 
+        # 在 DISPON 之前写入 RAM：Logo 或黑色填充
+        if logo_data and logo_w > 0 and logo_h > 0:
+            self.blit_block(logo_data, 0, 0, logo_w, logo_h)
+        else:
+            self.fill(0x0000)
+
+        # RAM 已就绪，安全开启显示
         self._cmd(_DISPON)
 
-        # 立即填黑，最小化白屏时间
-        self.fill(0x0000)
+        # 打开背光（如果有）
+        if self.bl is not None:
+            self.bl.on()
 
     def set_window(self, x0, y0, x1, y1):
         """设置写入窗口区域（含偏移校正）。
