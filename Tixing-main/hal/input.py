@@ -177,7 +177,7 @@ class Input:
         """
         evt = InputEvent()
         # 原子读取并清零 delta
-        evt.delta = self._delta
+        evt.delta = -self._delta
         self._delta = 0
         # 原子读取并清零按键事件
         evt.key = self._key_event

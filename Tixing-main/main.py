@@ -64,12 +64,7 @@ def main():
     sm.register(6, RGBScreen(ctx))     # UI_RGB
     sm.register(7, BrightnessScreen(ctx))  # UI_BRIGHT
 
-    # ── 第 4 步：开机动画 ──
-    sm.switch(UI_BOOT)
-    sm.render()
-    effects.startup_animation()
-
-    # ── 第 5 步：进入菜单 ──
+    # ── 第 4 步：直接进入菜单（跳过开机动画）──
     sm.switch(UI_MENU)
     gc.collect()
 

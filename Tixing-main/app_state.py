@@ -31,4 +31,4 @@ class AppState:
         self.rgb_mode = 0         # 0-2
         self.rgb_strip = 0        # 0-1
         self.rgb_channel = 0      # 0-2
-        self.menu_idx = 0         # 0-5
+        self.menu_idx = 0         # 0-4

@@ -118,6 +118,50 @@ def _render_rle(display, data, offset, w, h, x, y, fg, bg):
             display.blit(buf[off:off + stride], x, y + row, w, 1)
 
 
+def render_icon_buf(data, offset, w, h, fg, bg):
+    """RLE解码到 raw RGB565 buffer 并返回, 不写屏。
+
+    用于预渲染图标缓存, 动画时直接 blit_block。
+    返回 bytearray(w * h * 2)。
+    """
+    fg_r = (fg >> 11) & 0x1F
+    fg_g = (fg >> 5) & 0x3F
+    fg_b = fg & 0x1F
+    bg_r = (bg >> 11) & 0x1F
+    bg_g = (bg >> 5) & 0x3F
+    bg_b = bg & 0x1F
+    fgh = (fg >> 8) & 0xFF
+    fgl = fg & 0xFF
+    bgh = (bg >> 8) & 0xFF
+    bgl = bg & 0xFF
+    buf = bytearray(w * h * 2)
+    bi = 0
+    di = offset
+    dlen = len(data)
+    total_px = w * h
+    px_done = 0
+    while px_done < total_px:
+        if di >= dlen:
+            while px_done < total_px:
+                buf[bi] = bgh; buf[bi + 1] = bgl; bi += 2; px_done += 1
+            break
+        count = data[di]
+        if count == 0:
+            di += 1
+            while px_done < total_px:
+                buf[bi] = bgh; buf[bi + 1] = bgl; bi += 2; px_done += 1
+            break
+        val = data[di + 1]
+        di += 2
+        actual = min(count, total_px - px_done)
+        _fill_pixels(buf, bi, actual, val,
+                     fg_r, fg_g, fg_b, bg_r, bg_g, bg_b,
+                     fgh, fgl, bgh, bgl)
+        bi += actual * 2
+        px_done += actual
+    return buf
+
+
 def _fill_pixels(buf, bi, count, val,
                  fg_r, fg_g, fg_b, bg_r, bg_g, bg_b,
                  fgh, fgl, bgh, bgl):
@@ -145,3 +189,35 @@ def _fill_pixels(buf, bi, count, val,
             buf[bi] = ch
             buf[bi + 1] = cl
             bi += 2
+
+
+
+
+
+
+
+def scale_icon_buf(src, sw, sh, dw, dh):
+    """最近邻缩放预渲染 — 从 sw×sh RGB565 buffer 生成 dw×dh buffer。
+
+    仅在 on_enter 时调用一次，不在动画循环中使用。
+    返回 bytearray(dw * dh * 2)。
+    """
+    buf = bytearray(dw * dh * 2)
+    x_ratio = (sw << 8) // dw
+    y_ratio = (sh << 8) // dh
+    bi = 0
+    for y in range(dh):
+        sy = (y * y_ratio) >> 8
+        if sy >= sh:
+            sy = sh - 1
+        src_row = sy * sw * 2
+        for x in range(dw):
+            sx = (x * x_ratio) >> 8
+            if sx >= sw:
+                sx = sw - 1
+            si = src_row + sx * 2
+            buf[bi] = src[si]
+            buf[bi + 1] = src[si + 1]
+            bi += 2
+    return buf
+

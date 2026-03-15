@@ -99,30 +99,22 @@ class ST7789:
 
     def _init_seq(self):
         """ST7789 初始化序列（rotation=1, BGR, 16bit, INVON）。"""
-        # 软复位
         self._cmd(_SWRESET)
-        sleep_ms(150)
+        sleep_ms(50)
 
-        # 退出睡眠
         self._cmd(_SLPOUT)
-        sleep_ms(120)
+        sleep_ms(50)
 
-        # 16bit 色深
         self._cmd(_COLMOD, b'\x05')
-        sleep_ms(10)
 
         # MADCTL: rotation=1 → MX|MV = 0x60, RGB顺序(无BGR位)
         self._cmd(_MADCTL, b'\x60')
 
-        # 正常显示模式
         self._cmd(_NORON)
-        sleep_ms(10)
 
-        # 开启显示
         self._cmd(_DISPON)
-        sleep_ms(10)
 
-        # 初始化后立即填充黑色，避免白屏闪烁
+        # 立即填黑，最小化白屏时间
         self.fill(0x0000)
 
     def set_window(self, x0, y0, x1, y1):

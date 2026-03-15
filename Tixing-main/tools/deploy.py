@@ -12,10 +12,10 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MPREMOTE = [sys.executable, '-m', 'mpremote']
 
 # 串口设置（改成你的 Pico 串口号）
-PICO_PORT = 'COM6'
+PICO_PORT = 'COM4'
 
 # 需要烧录的目录和文件
-DIRS = ['drivers', 'hal', 'ui', 'screens', 'services', 'assets']
+DIRS = ['drivers', 'hal', 'ui', 'screens', 'services', 'assets', 'icons']
 ROOT_FILES = ['main.py', 'app_state.py', 'screen_manager.py']
 
 

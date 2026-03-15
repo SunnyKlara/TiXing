@@ -1,3 +1,4 @@
 {
-  "kiroAgent.configureMCP": "Disabled"
+  "kiroAgent.configureMCP": "Disabled",
+  "cmake.sourceDirectory": "D:/Users/26054/Desktop/TiXing/Tixing-main/pico"
 }
