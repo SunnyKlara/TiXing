@@ -21,8 +21,8 @@ SCREEN_W = 284
 SCREEN_H = 76
 CENTER = SCREEN_W // 2
 SPACING = 72
-FRAMES = 5
-DELAY = 5
+FRAMES = 3
+DELAY = 3
 
 BIG_W = 24
 BIG_H = 40
@@ -33,6 +33,7 @@ NUM_MIN = 0
 NUM_MAX = 340
 NUM_COUNT = NUM_MAX - NUM_MIN + 1
 VISIBLE = 5
+STEP = 5                     # 每次滚轮跳的步长
 ICON_Y = (SCREEN_H - BIG_H) // 2
 
 # 加载 0-9 字模 (两套尺寸)
@@ -78,7 +79,7 @@ def draw_static(center_val):
     disp.fill_rect(0, 0, SCREEN_W, SCREEN_H, 0)
     for s in range(VISIBLE):
         offset = s - 2
-        val = (center_val + offset) % NUM_COUNT
+        val = (center_val + offset * STEP) % NUM_COUNT
         cx = CENTER + offset * SPACING
         w, h = pick_size(cx)
         draw_number(val, cx, w, h)
@@ -93,7 +94,7 @@ def do_slide(center_val, direction):
     else:
         offsets = [-3, -2, -1, 0, 1, 2]
     for s in offsets:
-        val = (center_val + s) % NUM_COUNT
+        val = (center_val + s * STEP) % NUM_COUNT
         start_cx = CENTER + s * SPACING
         anim_items.append((val, start_cx))
     n = len(anim_items)
@@ -116,7 +117,7 @@ def do_slide(center_val, direction):
         if not last:
             sleep_ms(DELAY)
 
-    return (center_val + direction) % NUM_COUNT
+    return (center_val + direction * STEP) % NUM_COUNT
 
 
 # ── 主循环 ──
